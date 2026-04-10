@@ -1,0 +1,302 @@
+/* ═══════════════════════════════════════════════════════
+   OrbitFrame — After Capture Popup
+   Floating, minimal, dark-themed capture result UI
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --bg-popup: #12161E;
+  --bg-popup-secondary: #1A1F2B;
+  --bg-popup-hover: #242A38;
+  --text-primary: #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-muted: #484F58;
+  --accent: #58A6FF;
+  --accent-glow: rgba(88, 166, 255, 0.25);
+  --accent-purple: #A371F7;
+  --accent-purple-glow: rgba(163, 113, 247, 0.2);
+  --border: #2A3040;
+  --success: #3FB950;
+  --danger: #F85149;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --font: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --transition: 0.18s ease;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: transparent;
+  font-family: var(--font);
+  color: var(--text-primary);
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+
+/* ── Popup Container ── */
+.popup {
+  width: 340px;
+  background: var(--bg-popup);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.55),
+    0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 30px rgba(88, 166, 255, 0.07);
+  overflow: hidden;
+  animation: popupEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.popup.closing {
+  animation: popupExit 0.2s ease forwards;
+}
+
+@keyframes popupEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes popupExit {
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+/* ── Thumbnail Preview ── */
+.preview-area {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  background: #0A0E14;
+}
+
+.preview-area img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 8px 10px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preview-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(88, 166, 255, 0.2);
+  color: var(--accent);
+  border: 1px solid rgba(88, 166, 255, 0.25);
+}
+
+.preview-dimensions {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: var(--font-mono);
+}
+
+/* ── Confirmation Banner ── */
+.confirm-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: rgba(63, 185, 80, 0.12);
+  border-bottom: 1px solid rgba(63, 185, 80, 0.2);
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.25s ease;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.confirm-banner.visible {
+  max-height: 40px;
+  opacity: 1;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+/* ── Quick Action Buttons ── */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px;
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+}
+
+.action-btn:hover {
+  background: var(--bg-popup-hover);
+  color: var(--text-primary);
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+}
+
+.action-btn.primary {
+  color: var(--accent);
+}
+
+.action-btn.primary:hover {
+  background: rgba(88, 166, 255, 0.12);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.action-btn svg {
+  flex-shrink: 0;
+}
+
+.action-btn kbd {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 8px;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.popup:hover .action-btn kbd {
+  opacity: 1;
+}
+
+/* ── More Dropdown ── */
+.more-dropdown {
+  position: relative;
+}
+
+.more-btn {
+  flex: 0 !important;
+  width: 38px;
+  padding: 8px !important;
+}
+
+.dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  width: 200px;
+  background: var(--bg-popup);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: var(--transition);
+  z-index: 10;
+}
+
+.dropdown-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: var(--bg-popup-hover);
+  color: var(--text-primary);
+}
+
+.dropdown-item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.dropdown-item:hover svg {
+  color: var(--accent);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ── Auto-Dismiss Progress Bar ── */
+.dismiss-bar {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dismiss-progress {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-purple));
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-popup-hover); border-radius: 3px; }
