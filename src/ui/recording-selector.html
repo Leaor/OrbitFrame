@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>OrbitFrame — Recording Region</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      overflow: hidden;
+      cursor: crosshair;
+      background: transparent;
+    }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+    .info-badge {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(13, 17, 23, 0.85);
+      color: #E6EDF3;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 77, 106, 0.3);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      pointer-events: none;
+    }
+    .info-badge .accent { color: #FF4D6A; font-weight: 600; }
+    .size-label {
+      position: fixed;
+      background: rgba(13, 17, 23, 0.9);
+      color: #FF4D6A;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+      display: none;
+      z-index: 100;
+    }
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(13, 17, 23, 0.9);
+      border: 1px solid rgba(255, 77, 106, 0.3);
+      border-radius: 12px;
+      padding: 12px 20px;
+      display: none;
+      gap: 12px;
+      align-items: center;
+      z-index: 200;
+      backdrop-filter: blur(10px);
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .controls button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .btn-record {
+      background: #FF4D6A;
+      color: white;
+    }
+    .btn-record:hover { background: #ff2d50; }
+    .btn-stop {
+      background: #F85149;
+      color: white;
+      display: none;
+    }
+    .btn-cancel {
+      background: #21262D;
+      color: #8B949E;
+      border: 1px solid #30363D !important;
+    }
+    .timer {
+      color: #FF4D6A;
+      font-family: 'Cascadia Code', monospace;
+      font-size: 16px;
+      font-weight: 600;
+      min-width: 60px;
+      text-align: center;
+      display: none;
+    }
+    .recording-dot {
+      width: 10px;
+      height: 10px;
+      background: #FF4D6A;
+      border-radius: 50%;
+      animation: blink 1s infinite;
+      display: none;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+  <div class="info-badge">
+    <span class="accent">OrbitFrame Recording</span> — Select recording area. Press <span class="accent">Esc</span> to cancel.
+  </div>
+  <div class="size-label" id="sizeLabel"></div>
+  <canvas id="overlay"></canvas>
+
+  <div class="controls" id="controls">
+    <div class="recording-dot" id="recordDot"></div>
+    <div class="timer" id="timer">00:00</div>
+    <button class="btn-record" id="btnRecord" onclick="startRecording()">Start Recording</button>
+    <button class="btn-stop" id="btnStop" onclick="stopRecording()">Stop</button>
+    <button class="btn-cancel" onclick="cancel()">Cancel</button>
+  </div>
+
+  <script>
+    const { ipcRenderer, desktopCapturer } = require('electron');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+    const sizeLabel = document.getElementById('sizeLabel');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let drawing = false;
+    let regionSelected = false;
+    let startX = 0, startY = 0, endX = 0, endY = 0;
+    let region = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let timerInterval = null;
+    let seconds = 0;
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (drawing || regionSelected) {
+        const x = Math.min(startX, endX);
+        const y = Math.min(startY, endY);
+        const w = Math.abs(endX - startX);
+        const h = Math.abs(endY - startY);
+
+        ctx.clearRect(x, y, w, h);
+
+        ctx.strokeStyle = '#FF4D6A';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 3]);
+        ctx.strokeRect(x, y, w, h);
+        ctx.setLineDash([]);
+
+        const handleSize = 6;
+        ctx.fillStyle = '#FF4D6A';
+        [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(([cx, cy]) => {
+          ctx.fillRect(cx - handleSize / 2, cy - handleSize / 2, handleSize, handleSize);
+        });
+
+        sizeLabel.textContent = `${w} × ${h}`;
+        sizeLabel.style.display = 'block';
+        sizeLabel.style.left = `${x + w / 2 - 30}px`;
+        sizeLabel.style.top = `${y + h + 8}px`;
+      }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (regionSelected) return;
+      drawing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      endX = e.clientX;
+      endY = e.clientY;
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!drawing) return;
+      endX = e.clientX;
+      endY = e.clientY;
+      draw();
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      if (!drawing) return;
+      drawing = false;
+
+      const w = Math.abs(endX - startX);
+      const h = Math.abs(endY - startY);
+
+      if (w > 20 && h > 20) {
+        regionSelected = true;
+        region = {
+          x: Math.min(startX, endX),
+          y: Math.min(startY, endY),
+          width: w,
+          height: h
+        };
+        document.getElementById('controls').style.display = 'flex';
+        canvas.style.cursor = 'default';
+      }
+    });
+
+    async function startRecording() {
+      document.getElementById('btnRecord').style.display = 'none';
+      document.getElementById('btnStop').style.display = 'block';
+      document.getElementById('recordDot').style.display = 'block';
+      document.getElementById('timer').style.display = 'block';
+
+      seconds = 0;
+      timerInterval = setInterval(() => {
+        seconds++;
+        const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+        const s = String(seconds % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = `${m}:${s}`;
+      }, 1000);
+
+      try {
+        const sources = await desktopCapturer.getSources({ types: ['screen'] });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            mandatory: {
+              chromeMediaSource: 'desktop',
+              chromeMediaSourceId: sources[0].id,
+              minWidth: 1280,
+              maxWidth: 3840,
+              minHeight: 720,
+              maxHeight: 2160
+            }
+          }
+        });
+
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'video/webm;codecs=vp9',
+          videoBitsPerSecond: 5000000
+        });
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop());
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const reader = new FileReader();
+          reader.onload = () => {
+            const buffer = Buffer.from(reader.result);
+            ipcRenderer.send('recording-region-selected', {
+              ...region,
+              buffer: buffer.toString('base64'),
+              format: 'webm'
+            });
+          };
+          reader.readAsArrayBuffer(blob);
+        };
+
+        mediaRecorder.start(100);
+      } catch (err) {
+        console.error('Recording failed:', err);
+        cancel();
+      }
+    }
+
+    function stopRecording() {
+      clearInterval(timerInterval);
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+    }
+
+    function cancel() {
+      clearInterval(timerInterval);
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      ipcRenderer.send('recording-cancelled');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') cancel();
+    });
+
+    draw();
+  </script>
+</body>
+</html>

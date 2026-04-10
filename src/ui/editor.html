@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>OrbitFrame — Editor</title>
+  <link rel="stylesheet" href="styles/theme.css">
+  <style>
+    body { overflow: hidden; }
+    .editor-layout {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .editor-toolbar .divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+    .tool-button {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: var(--transition);
+    }
+    .tool-button:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .tool-button.active { background: var(--bg-active); color: var(--accent); border-color: var(--accent); }
+    .editor-canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      background: var(--bg-primary);
+      background-image:
+        linear-gradient(45deg, var(--bg-tertiary) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--bg-tertiary) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--bg-tertiary) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--bg-tertiary) 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+    #editorCanvas {
+      box-shadow: var(--shadow);
+      cursor: crosshair;
+    }
+    .editor-statusbar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 4px 12px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="editor-layout">
+    <!-- Titlebar -->
+    <div class="titlebar">
+      <div class="titlebar-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <circle cx="12" cy="12" r="10"/>
+          <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(30 12 12)"/>
+          <circle cx="12" cy="12" r="2" fill="currentColor"/>
+        </svg>
+        <span>OrbitFrame Editor</span>
+      </div>
+      <div class="titlebar-spacer"></div>
+      <div class="titlebar-controls">
+        <button class="titlebar-btn" onclick="require('electron').ipcRenderer.send('minimize-window')">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="1.5" fill="currentColor"/></svg>
+        </button>
+        <button class="titlebar-btn" onclick="require('electron').ipcRenderer.send('maximize-window')">
+          <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        </button>
+        <button class="titlebar-btn close" onclick="require('electron').ipcRenderer.send('close-window')">
+          <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="editor-toolbar">
+      <button class="tool-button active" data-tool="select" title="Select (V)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+      </button>
+      <button class="tool-button" data-tool="arrow" title="Arrow (A)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="12 5 19 5 19 12"/></svg>
+      </button>
+      <button class="tool-button" data-tool="rect" title="Rectangle (R)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+      </button>
+      <button class="tool-button" data-tool="circle" title="Ellipse (E)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+      </button>
+      <button class="tool-button" data-tool="line" title="Line (L)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+      </button>
+      <button class="tool-button" data-tool="pencil" title="Pencil (P)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4z"/></svg>
+      </button>
+      <button class="tool-button" data-tool="text" title="Text (T)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      </button>
+      <button class="tool-button" data-tool="highlight" title="Highlight (H)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="8" rx="1"/></svg>
+      </button>
+      <button class="tool-button" data-tool="blur" title="Blur (B)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="2 2"/></svg>
+      </button>
+
+      <div class="divider"></div>
+      <input type="color" id="colorPicker" value="#FF4D6A" style="width:28px;height:28px;border:none;cursor:pointer;background:none;padding:0">
+      <select id="strokeSize" style="padding:4px 8px;font-size:12px;width:65px">
+        <option value="1">1px</option>
+        <option value="2">2px</option>
+        <option value="3" selected>3px</option>
+        <option value="5">5px</option>
+        <option value="8">8px</option>
+      </select>
+
+      <div class="divider"></div>
+      <button class="tool-button" onclick="undo()" title="Undo (Ctrl+Z)">Undo</button>
+      <button class="tool-button" onclick="redo()" title="Redo (Ctrl+Y)">Redo</button>
+      <button class="tool-button" onclick="clearAnnotations()">Clear</button>
+
+      <span style="flex:1"></span>
+      <button class="tool-button" onclick="copyToClipboard()">Copy</button>
+      <button class="tool-button" style="background:var(--accent);color:#fff;border-color:var(--accent)" onclick="saveImage()">Save</button>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="editor-canvas-area">
+      <canvas id="editorCanvas"></canvas>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="editor-statusbar">
+      <span id="statusTool">Select</span>
+      <span id="statusSize">-</span>
+      <span id="statusPos">0, 0</span>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    const fs = require('fs');
+    const canvas = document.getElementById('editorCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let state = {
+      tool: 'select',
+      color: '#FF4D6A',
+      strokeWidth: 3,
+      image: null,
+      shapes: [],
+      redoStack: [],
+      drawing: false,
+      startX: 0, startY: 0,
+      currentShape: null
+    };
+
+    // Tool selection
+    document.querySelectorAll('.tool-button[data-tool]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tool-button[data-tool]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.tool = btn.dataset.tool;
+        document.getElementById('statusTool').textContent = state.tool.charAt(0).toUpperCase() + state.tool.slice(1);
+        canvas.style.cursor = state.tool === 'select' ? 'default' : 'crosshair';
+      });
+    });
+
+    document.getElementById('colorPicker').addEventListener('input', e => state.color = e.target.value);
+    document.getElementById('strokeSize').addEventListener('change', e => state.strokeWidth = parseInt(e.target.value));
+
+    // Load image from main process
+    ipcRenderer.on('load-image', (event, data) => {
+      const img = new Image();
+      img.onload = () => {
+        state.image = img;
+        canvas.width = img.width;
+        canvas.height = img.height;
+        document.getElementById('statusSize').textContent = `${img.width} × ${img.height}`;
+        redraw();
+      };
+      if (data.buffer) {
+        img.src = `data:image/png;base64,${data.buffer}`;
+      } else if (data.path) {
+        img.src = data.path;
+      }
+    });
+
+    function redraw() {
+      if (!state.image) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(state.image, 0, 0);
+      state.shapes.forEach(s => drawShape(s));
+    }
+
+    function drawShape(s) {
+      ctx.save();
+      ctx.strokeStyle = s.color;
+      ctx.fillStyle = s.color;
+      ctx.lineWidth = s.strokeWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      switch (s.type) {
+        case 'rect':
+          ctx.strokeRect(s.x, s.y, s.w, s.h);
+          break;
+        case 'circle':
+          ctx.beginPath();
+          ctx.ellipse(s.x + s.w / 2, s.y + s.h / 2, Math.abs(s.w) / 2, Math.abs(s.h) / 2, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          break;
+        case 'line':
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(s.x + s.w, s.y + s.h);
+          ctx.stroke();
+          break;
+        case 'arrow': {
+          const ex = s.x + s.w, ey = s.y + s.h;
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(ex, ey);
+          ctx.stroke();
+          const angle = Math.atan2(s.h, s.w);
+          const hl = 15;
+          ctx.beginPath();
+          ctx.moveTo(ex, ey);
+          ctx.lineTo(ex - hl * Math.cos(angle - Math.PI / 6), ey - hl * Math.sin(angle - Math.PI / 6));
+          ctx.moveTo(ex, ey);
+          ctx.lineTo(ex - hl * Math.cos(angle + Math.PI / 6), ey - hl * Math.sin(angle + Math.PI / 6));
+          ctx.stroke();
+          break;
+        }
+        case 'pencil':
+          if (s.points && s.points.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(s.points[0].x, s.points[0].y);
+            s.points.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.stroke();
+          }
+          break;
+        case 'text':
+          ctx.font = `${s.fontSize || 16}px 'Segoe UI', sans-serif`;
+          ctx.fillText(s.text, s.x, s.y);
+          break;
+        case 'highlight':
+          ctx.globalAlpha = 0.3;
+          ctx.fillRect(s.x, s.y, s.w, s.h);
+          break;
+        case 'blur': {
+          const bx = Math.min(s.x, s.x + s.w), by = Math.min(s.y, s.y + s.h);
+          const bw = Math.abs(s.w), bh = Math.abs(s.h);
+          if (bw > 0 && bh > 0) {
+            const imgData = ctx.getImageData(bx, by, bw, bh);
+            const ps = 10;
+            for (let py = 0; py < bh; py += ps) {
+              for (let px = 0; px < bw; px += ps) {
+                const i = (py * bw + px) * 4;
+                ctx.fillStyle = `rgb(${imgData.data[i]},${imgData.data[i+1]},${imgData.data[i+2]})`;
+                ctx.fillRect(bx + px, by + py, ps, ps);
+              }
+            }
+          }
+          break;
+        }
+      }
+      ctx.restore();
+    }
+
+    // Mouse handlers
+    canvas.addEventListener('mousedown', e => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      if (state.tool === 'text') {
+        const text = prompt('Enter text:');
+        if (text) {
+          state.shapes.push({ type: 'text', x, y, text, color: state.color, strokeWidth: state.strokeWidth, fontSize: 16 });
+          state.redoStack = [];
+          redraw();
+        }
+        return;
+      }
+      if (state.tool === 'select') return;
+
+      state.drawing = true;
+      state.startX = x;
+      state.startY = y;
+
+      if (state.tool === 'pencil') {
+        state.currentShape = { type: 'pencil', points: [{ x, y }], color: state.color, strokeWidth: state.strokeWidth };
+      }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      document.getElementById('statusPos').textContent = `${Math.round(x)}, ${Math.round(y)}`;
+
+      if (!state.drawing) return;
+
+      if (state.tool === 'pencil' && state.currentShape) {
+        state.currentShape.points.push({ x, y });
+        redraw();
+        drawShape(state.currentShape);
+        return;
+      }
+
+      redraw();
+      drawShape({
+        type: state.tool, x: state.startX, y: state.startY,
+        w: x - state.startX, h: y - state.startY,
+        color: state.color, strokeWidth: state.strokeWidth
+      });
+    });
+
+    canvas.addEventListener('mouseup', e => {
+      if (!state.drawing) return;
+      state.drawing = false;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      if (state.tool === 'pencil' && state.currentShape) {
+        state.shapes.push(state.currentShape);
+        state.currentShape = null;
+      } else {
+        state.shapes.push({
+          type: state.tool, x: state.startX, y: state.startY,
+          w: x - state.startX, h: y - state.startY,
+          color: state.color, strokeWidth: state.strokeWidth
+        });
+      }
+      state.redoStack = [];
+      redraw();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey && e.key === 'z') undo();
+      else if (e.ctrlKey && e.key === 'y') redo();
+      else if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveImage(); }
+      else if (e.ctrlKey && e.key === 'c') copyToClipboard();
+      const toolKeys = { v: 'select', a: 'arrow', r: 'rect', e: 'circle', l: 'line', p: 'pencil', t: 'text', h: 'highlight', b: 'blur' };
+      if (!e.ctrlKey && !e.altKey && toolKeys[e.key]) {
+        document.querySelector(`.tool-button[data-tool="${toolKeys[e.key]}"]`)?.click();
+      }
+    });
+
+    function undo() {
+      if (state.shapes.length === 0) return;
+      state.redoStack.push(state.shapes.pop());
+      redraw();
+    }
+
+    function redo() {
+      if (state.redoStack.length === 0) return;
+      state.shapes.push(state.redoStack.pop());
+      redraw();
+    }
+
+    function clearAnnotations() {
+      state.redoStack.push(...state.shapes);
+      state.shapes = [];
+      redraw();
+    }
+
+    function copyToClipboard() {
+      canvas.toBlob(blob => {
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      });
+    }
+
+    async function saveImage() {
+      const { dialog } = require('electron').remote || {};
+      const result = await ipcRenderer.invoke('show-save-dialog', {
+        defaultPath: 'OrbitFrame_edited.png',
+        filters: [{ name: 'PNG', extensions: ['png'] }, { name: 'JPEG', extensions: ['jpg'] }]
+      });
+      if (!result.canceled && result.filePath) {
+        const dataUrl = canvas.toDataURL('image/png');
+        const base64 = dataUrl.split(',')[1];
+        fs.writeFileSync(result.filePath, Buffer.from(base64, 'base64'));
+      }
+    }
+  </script>
+</body>
+</html>

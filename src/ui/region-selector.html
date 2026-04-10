@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>OrbitFrame — Select Region</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      overflow: hidden;
+      cursor: crosshair;
+      background: transparent;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+    .info-badge {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(13, 17, 23, 0.85);
+      color: #E6EDF3;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .info-badge .accent { color: #58A6FF; font-weight: 600; }
+    .info-badge.hidden { opacity: 0; pointer-events: none; }
+    .size-label {
+      position: fixed;
+      background: rgba(13, 17, 23, 0.9);
+      color: #58A6FF;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      pointer-events: none;
+      display: none;
+      z-index: 100;
+    }
+
+    /* ── Region Toolbar ── */
+    .region-toolbar {
+      position: fixed;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 3px 4px;
+      background: rgba(13, 17, 23, 0.92);
+      border: 1px solid rgba(88, 166, 255, 0.15);
+      border-radius: 8px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.3);
+      user-select: none;
+      animation: toolbarIn 0.15s ease;
+    }
+    @keyframes toolbarIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 1px;
+    }
+    .toolbar-sep {
+      width: 1px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 0 3px;
+    }
+    .toolbar-btn {
+      width: 28px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: rgba(230, 237, 243, 0.65);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.12s ease;
+    }
+    .toolbar-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #E6EDF3;
+    }
+    .toolbar-btn.active {
+      background: rgba(88, 166, 255, 0.2);
+      color: #58A6FF;
+    }
+    .toolbar-btn:active { transform: scale(0.92); }
+    .toolbar-btn.confirm-btn {
+      color: #3FB950;
+      width: 32px;
+    }
+    .toolbar-btn.confirm-btn:hover { background: rgba(63, 185, 80, 0.2); }
+    .toolbar-btn.cancel-btn { color: rgba(248, 81, 73, 0.7); }
+    .toolbar-btn.cancel-btn:hover {
+      background: rgba(248, 81, 73, 0.15);
+      color: #F85149;
+    }
+    .toolbar-btn svg { width: 15px; height: 15px; }
+    .toolbar-color {
+      width: 22px;
+      height: 22px;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+      padding: 0;
+    }
+    .toolbar-color::-webkit-color-swatch-wrapper { padding: 0; }
+    .toolbar-color::-webkit-color-swatch { border: none; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div class="info-badge" id="infoBadge">
+    <span class="accent">OrbitFrame</span> — Click and drag to select a region. Press <span class="accent">Esc</span> to cancel.
+  </div>
+  <div class="size-label" id="sizeLabel"></div>
+
+  <!-- Region Toolbar (hidden until selection complete) -->
+  <div class="region-toolbar" id="toolbar" style="display:none">
+    <!-- File Actions -->
+    <div class="toolbar-group">
+      <button class="toolbar-btn" data-action="save" title="Save Image (Ctrl+S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      </button>
+      <button class="toolbar-btn" data-action="copy" title="Copy to Clipboard (Ctrl+C)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </button>
+      <button class="toolbar-btn" data-action="copy-path" title="Copy File Path">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      </button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <!-- Integration Actions -->
+    <div class="toolbar-group">
+      <button class="toolbar-btn" data-action="edit" title="Open in Editor (E)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </button>
+      <button class="toolbar-btn" data-action="upload" title="Upload (U)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </button>
+      <button class="toolbar-btn" data-action="ocr" title="OCR Extract Text (T)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      </button>
+      <button class="toolbar-btn" data-action="pin" title="Pin to Screen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V3H8v3h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z"/></svg>
+      </button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <!-- Annotation Tools -->
+    <div class="toolbar-group">
+      <button class="toolbar-btn" data-tool="rect" title="Rectangle (R)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+      </button>
+      <button class="toolbar-btn" data-tool="ellipse" title="Ellipse (O)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
+      </button>
+      <button class="toolbar-btn" data-tool="arrow" title="Arrow (A)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="12 5 19 5 19 12"/></svg>
+      </button>
+      <button class="toolbar-btn" data-tool="line" title="Line (L)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+      </button>
+      <button class="toolbar-btn" data-tool="text" title="Text (Shift+T)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+      </button>
+      <button class="toolbar-btn" data-tool="blur" title="Blur / Pixelate (B)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="2 2"/></svg>
+      </button>
+      <button class="toolbar-btn" data-tool="highlight" title="Highlight (H)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="8" rx="1"/></svg>
+      </button>
+      <input type="color" class="toolbar-color" id="annotColor" value="#FF4D6A" title="Annotation Color">
+    </div>
+    <div class="toolbar-sep"></div>
+    <!-- Undo / Redo -->
+    <div class="toolbar-group">
+      <button class="toolbar-btn" data-action="undo" title="Undo (Ctrl+Z)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+      </button>
+      <button class="toolbar-btn" data-action="redo" title="Redo (Ctrl+Y)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.13-9.36L23 10"/></svg>
+      </button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <!-- Confirm / Cancel -->
+    <div class="toolbar-group">
+      <button class="toolbar-btn cancel-btn" data-action="cancel" title="Cancel (Esc)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <button class="toolbar-btn confirm-btn" data-action="confirm" title="Confirm (Enter)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <canvas id="overlay"></canvas>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    // ── Canvas ──
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d');
+    const sizeLabel = document.getElementById('sizeLabel');
+    const infoBadge = document.getElementById('infoBadge');
+    const toolbar = document.getElementById('toolbar');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // ── State ──
+    let state = 'waiting'; // 'waiting' | 'selecting' | 'toolbar'
+    let screenshotImg = null;
+    let scaleFactor = 1;
+    let captureMode = 'capture';
+
+    // Selection
+    let drawing = false;
+    let startX = 0, startY = 0, endX = 0, endY = 0;
+    let region = null;
+
+    // Annotations
+    let activeTool = null;
+    let annotating = false;
+    let annotations = [];
+    let redoStack = [];
+    let currentAnnotation = null;
+    let annotColor = '#FF4D6A';
+    let annotStroke = 3;
+
+    // ── Init from main process ──
+    ipcRenderer.on('init-region-capture', (event, data) => {
+      scaleFactor = data.scaleFactor || 1;
+      captureMode = data.mode || 'capture';
+
+      if (data.screenshot) {
+        screenshotImg = new Image();
+        screenshotImg.onload = () => {
+          state = 'selecting';
+          render();
+        };
+        screenshotImg.src = `data:image/png;base64,${data.screenshot}`;
+      } else {
+        state = 'selecting';
+        render();
+      }
+    });
+
+    // ── Render ──
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (state === 'waiting') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      if (state === 'selecting') {
+        // Draw screenshot background (or transparent) with dim overlay
+        if (screenshotImg) {
+          ctx.drawImage(screenshotImg, 0, 0, canvas.width, canvas.height);
+        }
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (drawing) {
+          const rx = Math.min(startX, endX);
+          const ry = Math.min(startY, endY);
+          const rw = Math.abs(endX - startX);
+          const rh = Math.abs(endY - startY);
+
+          // Clear selection to show bright region
+          if (screenshotImg && rw > 0 && rh > 0) {
+            ctx.drawImage(screenshotImg,
+              rx * scaleFactor, ry * scaleFactor, rw * scaleFactor, rh * scaleFactor,
+              rx, ry, rw, rh
+            );
+          } else if (!screenshotImg) {
+            ctx.clearRect(rx, ry, rw, rh);
+          }
+
+          // Selection border
+          ctx.strokeStyle = '#58A6FF';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 3]);
+          ctx.strokeRect(rx, ry, rw, rh);
+          ctx.setLineDash([]);
+
+          // Corner handles
+          ctx.fillStyle = '#58A6FF';
+          [[rx, ry], [rx + rw, ry], [rx, ry + rh], [rx + rw, ry + rh]].forEach(([cx, cy]) => {
+            ctx.fillRect(cx - 3, cy - 3, 6, 6);
+          });
+
+          // Size label
+          sizeLabel.textContent = `${rw} × ${rh}`;
+          sizeLabel.style.display = 'block';
+          sizeLabel.style.left = `${rx + rw / 2 - 30}px`;
+          sizeLabel.style.top = `${ry + rh + 8}px`;
+        }
+        return;
+      }
+
+      // state === 'toolbar'
+      // Draw full screenshot then dim outside selection
+      if (screenshotImg) {
+        ctx.drawImage(screenshotImg, 0, 0, canvas.width, canvas.height);
+      }
+
+      const { x, y, width, height } = region;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(0, 0, canvas.width, y);                                // Top
+      ctx.fillRect(0, y, x, height);                                       // Left
+      ctx.fillRect(x + width, y, canvas.width - x - width, height);       // Right
+      ctx.fillRect(0, y + height, canvas.width, canvas.height - y - height); // Bottom
+
+      // Selection border (solid)
+      ctx.strokeStyle = '#58A6FF';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.strokeRect(x - 1, y - 1, width + 2, height + 2);
+
+      // Draw annotations clipped to selection
+      if (annotations.length > 0 || currentAnnotation) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, width, height);
+        ctx.clip();
+        annotations.forEach(a => drawAnnotation(ctx, a));
+        if (currentAnnotation) drawAnnotation(ctx, currentAnnotation);
+        ctx.restore();
+      }
+    }
+
+    // ── Draw Annotation Shape ──
+    function drawAnnotation(c, shape) {
+      c.save();
+      c.strokeStyle = shape.color || annotColor;
+      c.fillStyle = shape.color || annotColor;
+      c.lineWidth = shape.strokeWidth || annotStroke;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+
+      switch (shape.type) {
+        case 'rect':
+          c.strokeRect(shape.x, shape.y, shape.w, shape.h);
+          break;
+        case 'ellipse': {
+          const cx = shape.x + shape.w / 2;
+          const cy = shape.y + shape.h / 2;
+          c.beginPath();
+          c.ellipse(cx, cy, Math.abs(shape.w / 2), Math.abs(shape.h / 2), 0, 0, Math.PI * 2);
+          c.stroke();
+          break;
+        }
+        case 'arrow': {
+          const ex = shape.x + shape.w;
+          const ey = shape.y + shape.h;
+          c.beginPath();
+          c.moveTo(shape.x, shape.y);
+          c.lineTo(ex, ey);
+          c.stroke();
+          const angle = Math.atan2(shape.h, shape.w);
+          const headLen = 14;
+          c.beginPath();
+          c.moveTo(ex, ey);
+          c.lineTo(ex - headLen * Math.cos(angle - Math.PI / 6), ey - headLen * Math.sin(angle - Math.PI / 6));
+          c.moveTo(ex, ey);
+          c.lineTo(ex - headLen * Math.cos(angle + Math.PI / 6), ey - headLen * Math.sin(angle + Math.PI / 6));
+          c.stroke();
+          break;
+        }
+        case 'line':
+          c.beginPath();
+          c.moveTo(shape.x, shape.y);
+          c.lineTo(shape.x + shape.w, shape.y + shape.h);
+          c.stroke();
+          break;
+        case 'text':
+          c.font = `${shape.fontSize || 16}px 'Segoe UI', sans-serif`;
+          c.fillText(shape.text, shape.x, shape.y);
+          break;
+        case 'blur': {
+          const bx = Math.min(shape.x, shape.x + shape.w);
+          const by = Math.min(shape.y, shape.y + shape.h);
+          const bw = Math.abs(shape.w);
+          const bh = Math.abs(shape.h);
+          if (bw > 0 && bh > 0) {
+            try {
+              const imgData = c.getImageData(bx, by, bw, bh);
+              const ps = 10;
+              for (let py = 0; py < bh; py += ps) {
+                for (let px = 0; px < bw; px += ps) {
+                  const i = (py * bw + px) * 4;
+                  c.fillStyle = `rgb(${imgData.data[i]},${imgData.data[i + 1]},${imgData.data[i + 2]})`;
+                  c.fillRect(bx + px, by + py, ps, ps);
+                }
+              }
+            } catch (e) {}
+          }
+          break;
+        }
+        case 'highlight':
+          c.globalAlpha = 0.3;
+          c.fillRect(shape.x, shape.y, shape.w, shape.h);
+          c.globalAlpha = 1;
+          break;
+      }
+      c.restore();
+    }
+
+    // ── Mouse Events ──
+    canvas.addEventListener('mousedown', (e) => {
+      const x = e.clientX, y = e.clientY;
+
+      if (state === 'selecting') {
+        drawing = true;
+        startX = x; startY = y; endX = x; endY = y;
+        return;
+      }
+
+      if (state === 'toolbar' && activeTool) {
+        // Only annotate within the selection region
+        if (x < region.x || x > region.x + region.width ||
+            y < region.y || y > region.y + region.height) return;
+
+        if (activeTool === 'text') {
+          const text = prompt('Enter text:');
+          if (text) {
+            annotations.push({ type: 'text', x, y, text, color: annotColor, fontSize: 16 });
+            redoStack = [];
+            render();
+          }
+          return;
+        }
+
+        annotating = true;
+        startX = x; startY = y;
+        currentAnnotation = {
+          type: activeTool, x, y, w: 0, h: 0,
+          color: annotColor, strokeWidth: annotStroke
+        };
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const x = e.clientX, y = e.clientY;
+
+      if (state === 'selecting' && drawing) {
+        endX = x; endY = y;
+        render();
+      } else if (state === 'toolbar' && annotating && currentAnnotation) {
+        currentAnnotation.w = x - startX;
+        currentAnnotation.h = y - startY;
+        render();
+      }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (state === 'selecting' && drawing) {
+        drawing = false;
+
+        const rx = Math.min(startX, endX);
+        const ry = Math.min(startY, endY);
+        const rw = Math.abs(endX - startX);
+        const rh = Math.abs(endY - startY);
+
+        if (rw > 5 && rh > 5) {
+          region = { x: rx, y: ry, width: rw, height: rh };
+
+          if (captureMode === 'capture' && screenshotImg) {
+            // Transition to toolbar state
+            state = 'toolbar';
+            infoBadge.classList.add('hidden');
+            sizeLabel.style.display = 'none';
+            document.body.style.cursor = 'default';
+            canvas.style.cursor = 'default';
+            showToolbar();
+            render();
+          } else {
+            // OCR mode or no pre-capture: send region directly
+            ipcRenderer.send('region-selected', { x: rx, y: ry, width: rw, height: rh });
+          }
+        } else {
+          ipcRenderer.send('region-cancelled');
+        }
+        return;
+      }
+
+      if (state === 'toolbar' && annotating && currentAnnotation) {
+        annotating = false;
+        if (Math.abs(currentAnnotation.w) > 2 || Math.abs(currentAnnotation.h) > 2) {
+          annotations.push(currentAnnotation);
+          redoStack = [];
+        }
+        currentAnnotation = null;
+        render();
+      }
+    });
+
+    // ── Toolbar Positioning ──
+    function showToolbar() {
+      toolbar.style.display = 'flex';
+      requestAnimationFrame(() => positionToolbar());
+    }
+
+    function positionToolbar() {
+      const tw = toolbar.offsetWidth;
+      const th = toolbar.offsetHeight;
+      const margin = 8;
+
+      // Center horizontally on selection
+      let left = region.x + (region.width / 2) - (tw / 2);
+      left = Math.max(margin, Math.min(left, window.innerWidth - tw - margin));
+
+      // Prefer above; fallback below; last resort inside
+      let top;
+      if (region.y - th - margin > 0) {
+        top = region.y - th - margin;
+      } else if (region.y + region.height + th + margin < window.innerHeight) {
+        top = region.y + region.height + margin;
+      } else {
+        top = region.y + margin;
+      }
+
+      toolbar.style.left = `${left}px`;
+      toolbar.style.top = `${top}px`;
+    }
+
+    // ── Toolbar Click Handler ──
+    toolbar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.toolbar-btn');
+      if (!btn) return;
+
+      const action = btn.dataset.action;
+      const tool = btn.dataset.tool;
+
+      if (tool) {
+        // Toggle annotation tool
+        toolbar.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+        if (activeTool === tool) {
+          activeTool = null;
+        } else {
+          activeTool = tool;
+          btn.classList.add('active');
+        }
+        canvas.style.cursor = activeTool ? 'crosshair' : 'default';
+        return;
+      }
+
+      switch (action) {
+        case 'undo':
+          if (annotations.length > 0) { redoStack.push(annotations.pop()); render(); }
+          return;
+        case 'redo':
+          if (redoStack.length > 0) { annotations.push(redoStack.pop()); render(); }
+          return;
+        case 'cancel':
+          ipcRenderer.send('region-cancelled');
+          return;
+        default:
+          // All other actions: confirm capture with this quick action
+          confirmCapture(action);
+      }
+    });
+
+    // Color picker
+    document.getElementById('annotColor').addEventListener('input', (e) => {
+      annotColor = e.target.value;
+    });
+
+    // ── Keyboard Shortcuts ──
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (state === 'toolbar' && activeTool) {
+          // Deselect tool first
+          activeTool = null;
+          toolbar.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+          canvas.style.cursor = 'default';
+        } else {
+          ipcRenderer.send('region-cancelled');
+        }
+        return;
+      }
+
+      if (state !== 'toolbar') return;
+
+      if (e.key === 'Enter') {
+        confirmCapture('confirm');
+        return;
+      }
+
+      // Ctrl+ shortcuts
+      if (e.ctrlKey) {
+        if (e.key === 'z' || e.key === 'Z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            if (redoStack.length > 0) { annotations.push(redoStack.pop()); render(); }
+          } else {
+            if (annotations.length > 0) { redoStack.push(annotations.pop()); render(); }
+          }
+          return;
+        }
+        if (e.key === 'y' || e.key === 'Y') {
+          e.preventDefault();
+          if (redoStack.length > 0) { annotations.push(redoStack.pop()); render(); }
+          return;
+        }
+        if (e.key === 's' || e.key === 'S') { e.preventDefault(); confirmCapture('save'); return; }
+        if (e.key === 'c' || e.key === 'C') { e.preventDefault(); confirmCapture('copy'); return; }
+      }
+
+      // Single-key shortcuts (no modifiers except shift)
+      if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+        const toolMap = { r: 'rect', o: 'ellipse', a: 'arrow', l: 'line', b: 'blur', h: 'highlight' };
+        const key = e.key.toLowerCase();
+
+        if (toolMap[key]) {
+          const tool = toolMap[key];
+          toolbar.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+          if (activeTool === tool) {
+            activeTool = null;
+          } else {
+            activeTool = tool;
+            toolbar.querySelector(`[data-tool="${tool}"]`)?.classList.add('active');
+          }
+          canvas.style.cursor = activeTool ? 'crosshair' : 'default';
+          return;
+        }
+
+        if (e.key === 'T' && e.shiftKey) {
+          toolbar.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+          activeTool = activeTool === 'text' ? null : 'text';
+          if (activeTool) toolbar.querySelector('[data-tool="text"]')?.classList.add('active');
+          canvas.style.cursor = activeTool ? 'crosshair' : 'default';
+          return;
+        }
+
+        if (key === 'e') { confirmCapture('edit'); return; }
+        if (key === 'u') { confirmCapture('upload'); return; }
+        if (key === 't' && !e.shiftKey) { confirmCapture('ocr'); return; }
+      }
+    });
+
+    // ── Confirm & Export ──
+    function confirmCapture(quickAction) {
+      if (!screenshotImg || !region) {
+        // Fallback: no pre-capture, send region for main process to capture
+        ipcRenderer.send('region-selected', region);
+        return;
+      }
+
+      const imageBase64 = createFinalImage();
+      ipcRenderer.send('region-confirmed', {
+        imageBase64,
+        region,
+        quickAction: quickAction || 'confirm'
+      });
+    }
+
+    function createFinalImage() {
+      const sf = scaleFactor;
+      const ow = Math.round(region.width * sf);
+      const oh = Math.round(region.height * sf);
+
+      const off = document.createElement('canvas');
+      off.width = ow;
+      off.height = oh;
+      const oc = off.getContext('2d');
+
+      // Draw screenshot region at full physical resolution
+      oc.drawImage(
+        screenshotImg,
+        Math.round(region.x * sf), Math.round(region.y * sf), ow, oh,
+        0, 0, ow, oh
+      );
+
+      // Draw annotations scaled to physical resolution
+      if (annotations.length > 0) {
+        oc.save();
+        oc.scale(sf, sf);
+        oc.translate(-region.x, -region.y);
+        annotations.forEach(a => drawAnnotation(oc, a));
+        oc.restore();
+      }
+
+      return off.toDataURL('image/png').split(',')[1];
+    }
+
+    // ── Initial render ──
+    render();
+  </script>
+</body>
+</html>

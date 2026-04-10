@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OrbitFrame</title>
+  <link rel="stylesheet" href="styles/theme.css">
+  <style>
+    /* Page transitions */
+    .page { display: none; }
+    .page.active { display: block; animation: fadeIn 0.15s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+  <!-- Orbital Background Accents -->
+  <div class="orbit-ring"></div>
+  <div class="orbit-ring"></div>
+
+  <!-- Title Bar -->
+  <div class="titlebar">
+    <div class="titlebar-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(30 12 12)"/>
+        <circle cx="12" cy="12" r="2" fill="currentColor"/>
+      </svg>
+      <span>OrbitFrame</span>
+    </div>
+    <div class="titlebar-spacer"></div>
+    <div class="titlebar-controls">
+      <button class="titlebar-btn" onclick="ipcRenderer.send('minimize-window')">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="1.5" fill="currentColor"/></svg>
+      </button>
+      <button class="titlebar-btn" onclick="ipcRenderer.send('maximize-window')">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      </button>
+      <button class="titlebar-btn close" onclick="ipcRenderer.send('close-window')">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- App Layout -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-section">Capture</div>
+      <button class="sidebar-item active" data-page="home">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+        Dashboard
+      </button>
+      <button class="sidebar-item" data-page="capture">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Quick Capture
+      </button>
+      <button class="sidebar-item" data-page="editor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Editor
+      </button>
+
+      <div class="sidebar-section">Tools</div>
+      <button class="sidebar-item" data-page="analyze">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        Analyze Image
+      </button>
+
+      <div class="sidebar-section">Library</div>
+      <button class="sidebar-item" data-page="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        History
+      </button>
+
+      <div class="sidebar-section">Configuration</div>
+      <button class="sidebar-item" data-page="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </button>
+      <button class="sidebar-item" data-page="hotkeys">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M8 16h8"/></svg>
+        Hotkeys
+      </button>
+      <button class="sidebar-item" data-page="upload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload
+      </button>
+
+      <div class="sidebar-section">About</div>
+      <button class="sidebar-item" data-page="about">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        About
+      </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- ═══ Home / Dashboard ═══ -->
+      <div class="page active" id="page-home">
+        <div class="page-header">
+          <h1>OrbitFrame Dashboard</h1>
+          <p>Your orbital command center for screen capture</p>
+        </div>
+
+        <div class="capture-grid">
+          <div class="capture-card" onclick="doCapture('fullscreen')">
+            <div class="icon blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h3>Fullscreen</h3>
+            <span class="shortcut-tag" id="hk-fullscreen">PrtSc</span>
+          </div>
+
+          <div class="capture-card" onclick="doCapture('region')">
+            <div class="icon purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            </div>
+            <h3>Region</h3>
+            <span class="shortcut-tag" id="hk-region">Ctrl+Shift+A</span>
+          </div>
+
+          <div class="capture-card" onclick="doCapture('window')">
+            <div class="icon cyan">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="7" x2="22" y2="7"/><circle cx="5" cy="5" r="0.5" fill="currentColor"/><circle cx="8" cy="5" r="0.5" fill="currentColor"/></svg>
+            </div>
+            <h3>Window</h3>
+            <span class="shortcut-tag" id="hk-window">Alt+PrtSc</span>
+          </div>
+
+          <div class="capture-card" onclick="doCapture('scrolling')">
+            <div class="icon green">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="6" x2="12" y2="18"/><polyline points="8 14 12 18 16 14"/></svg>
+            </div>
+            <h3>Scrolling</h3>
+            <span class="shortcut-tag" id="hk-scrolling">Ctrl+Alt+PrtSc</span>
+          </div>
+
+          <div class="capture-card" onclick="doCapture('gif')">
+            <div class="icon pink">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><text x="12" y="15" text-anchor="middle" font-size="8" fill="currentColor" stroke="none" font-weight="bold">GIF</text></svg>
+            </div>
+            <h3>Record GIF</h3>
+            <span class="shortcut-tag" id="hk-gif">Ctrl+Shift+G</span>
+          </div>
+
+          <div class="capture-card" onclick="doCapture('video')">
+            <div class="icon orange">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            </div>
+            <h3>Record Video</h3>
+            <span class="shortcut-tag" id="hk-video">Ctrl+Shift+V</span>
+          </div>
+
+          <div class="capture-card" onclick="doCapture('ocr')">
+            <div class="icon cyan">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            </div>
+            <h3>OCR Extract</h3>
+            <span class="shortcut-tag" id="hk-ocr">Ctrl+Shift+O</span>
+          </div>
+        </div>
+
+        <!-- Recent Captures -->
+        <div class="card" style="margin-top: 24px;">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Recent Captures
+          </div>
+          <div id="recent-captures" class="history-list">
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+              <h3>No captures yet</h3>
+              <p>Use the buttons above or press a hotkey to take your first capture</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Quick Capture ═══ -->
+      <div class="page" id="page-capture">
+        <div class="page-header">
+          <h1>Quick Capture</h1>
+          <p>Choose a capture mode to begin</p>
+        </div>
+        <div class="capture-grid">
+          <div class="capture-card" onclick="doCapture('fullscreen')">
+            <div class="icon blue">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h3>Fullscreen Capture</h3>
+            <p style="font-size:12px;color:var(--text-muted)">Capture the entire screen</p>
+          </div>
+          <div class="capture-card" onclick="doCapture('region')">
+            <div class="icon purple">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="4 2"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+            </div>
+            <h3>Region Capture</h3>
+            <p style="font-size:12px;color:var(--text-muted)">Select an area to capture</p>
+          </div>
+          <div class="capture-card" onclick="doCapture('window')">
+            <div class="icon cyan">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="7" x2="22" y2="7"/></svg>
+            </div>
+            <h3>Window Capture</h3>
+            <p style="font-size:12px;color:var(--text-muted)">Capture a specific window</p>
+          </div>
+          <div class="capture-card" onclick="doCapture('gif')">
+            <div class="icon pink">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <h3>Record GIF</h3>
+            <p style="font-size:12px;color:var(--text-muted)">Record animated GIF</p>
+          </div>
+          <div class="capture-card" onclick="doCapture('video')">
+            <div class="icon orange">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            </div>
+            <h3>Record Video</h3>
+            <p style="font-size:12px;color:var(--text-muted)">Screen recording with audio</p>
+          </div>
+          <div class="capture-card" onclick="doCapture('ocr')">
+            <div class="icon cyan">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+            </div>
+            <h3>OCR Extract</h3>
+            <p style="font-size:12px;color:var(--text-muted)">Extract text from screen</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Editor ═══ -->
+      <div class="page" id="page-editor">
+        <div class="page-header">
+          <h1>Image Editor</h1>
+          <p>Annotate and edit your captures</p>
+        </div>
+        <div id="editor-container">
+          <div class="empty-state" id="editor-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <h3>No image loaded</h3>
+            <p>Take a capture or drag an image here to start editing</p>
+            <button class="btn btn-primary" style="margin-top:12px" onclick="loadImageForEditor()">Open Image</button>
+          </div>
+          <div id="editor-workspace" style="display:none">
+            <!-- Editor Toolbar -->
+            <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+              <button class="btn btn-sm tool-btn active" data-tool="select" title="Select">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg> Select
+              </button>
+              <button class="btn btn-sm tool-btn" data-tool="arrow" title="Arrow">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="12 5 19 5 19 12"/></svg> Arrow
+              </button>
+              <button class="btn btn-sm tool-btn" data-tool="rect" title="Rectangle">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/></svg> Rect
+              </button>
+              <button class="btn btn-sm tool-btn" data-tool="circle" title="Circle">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg> Circle
+              </button>
+              <button class="btn btn-sm tool-btn" data-tool="line" title="Line">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="19" x2="19" y2="5"/></svg> Line
+              </button>
+              <button class="btn btn-sm tool-btn" data-tool="pencil" title="Pencil">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Draw
+              </button>
+              <button class="btn btn-sm tool-btn" data-tool="text" title="Text">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg> Text
+              </button>
+              <button class="btn btn-sm tool-btn" data-tool="highlight" title="Highlight">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="8" rx="1" fill="yellow" opacity="0.3"/></svg> Highlight
+              </button>
+              <button class="btn btn-sm tool-btn" data-tool="blur" title="Blur">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="2 2"/></svg> Blur
+              </button>
+              <span style="border-left:1px solid var(--border);margin:0 4px"></span>
+              <input type="color" id="editor-color" value="#FF4D6A" style="width:30px;height:28px;border:none;cursor:pointer;background:none">
+              <select id="editor-stroke" style="width:60px;padding:4px">
+                <option value="1">1px</option>
+                <option value="2">2px</option>
+                <option value="3" selected>3px</option>
+                <option value="5">5px</option>
+                <option value="8">8px</option>
+              </select>
+              <span style="border-left:1px solid var(--border);margin:0 4px"></span>
+              <button class="btn btn-sm" onclick="editorUndo()">Undo</button>
+              <button class="btn btn-sm" onclick="editorRedo()">Redo</button>
+              <button class="btn btn-sm" onclick="editorClear()">Clear</button>
+              <span style="flex:1"></span>
+              <button class="btn btn-sm" onclick="editorCopy()">Copy</button>
+              <button class="btn btn-sm btn-primary" onclick="editorSave()">Save</button>
+            </div>
+            <canvas id="editor-canvas" style="border:1px solid var(--border);border-radius:var(--radius);cursor:crosshair;max-width:100%;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ History ═══ -->
+      <div class="page" id="page-history">
+        <div class="page-header">
+          <h1>Capture History</h1>
+          <p>Browse and manage your past captures</p>
+        </div>
+        <div class="form-row" style="margin-bottom:16px">
+          <input type="text" id="history-search" placeholder="Search captures..." style="flex:1">
+          <button class="btn btn-sm" onclick="clearHistory()">Clear All</button>
+        </div>
+        <div id="history-grid" class="history-list">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <h3>No captures in history</h3>
+            <p>Your captures will appear here</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Settings ═══ -->
+      <div class="page" id="page-settings">
+        <div class="page-header">
+          <h1>Settings</h1>
+          <p>Configure OrbitFrame to your liking</p>
+        </div>
+
+        <!-- General -->
+        <div class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            General
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Theme</h4>
+              <p>Switch between dark and light mode</p>
+            </div>
+            <select id="setting-theme" onchange="setTheme(this.value)">
+              <option value="dark">Dark (Orbital)</option>
+              <option value="light">Light (Nova)</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Save Location</h4>
+              <p id="save-path-display">Loading...</p>
+            </div>
+            <button class="btn btn-sm" onclick="selectSavePath()">Browse</button>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Image Format</h4>
+              <p>Default format for screenshots</p>
+            </div>
+            <select id="setting-format" onchange="updateSetting('general.imageFormat', this.value)">
+              <option value="png">PNG</option>
+              <option value="jpg">JPEG</option>
+              <option value="webp">WebP</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Image Quality</h4>
+              <p>JPEG/WebP quality (1-100)</p>
+            </div>
+            <input type="number" id="setting-quality" min="1" max="100" style="width:80px" onchange="updateSetting('general.imageQuality', parseInt(this.value))">
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Start with Windows</h4>
+              <p>Launch OrbitFrame on startup</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="setting-startup" onchange="updateSetting('general.startWithWindows', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Start Minimized</h4>
+              <p>Start in system tray</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="setting-minimized" onchange="updateSetting('general.startMinimized', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- After Capture Workflow Pipeline -->
+        <div class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Capture Workflow
+            <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:400">Select a preset or customize your pipeline</span>
+          </div>
+
+          <!-- Workflow Preset Cards -->
+          <div class="workflow-presets" id="workflow-presets">
+            <div class="workflow-preset active" data-workflow="quick-copy" onclick="selectWorkflow('quick-copy')">
+              <div class="workflow-preset-icon blue">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              </div>
+              <div class="workflow-preset-info">
+                <div class="workflow-preset-name">Quick Copy</div>
+                <div class="workflow-preset-desc">Copy to clipboard instantly</div>
+              </div>
+            </div>
+            <div class="workflow-preset" data-workflow="share-mode" onclick="selectWorkflow('share-mode')">
+              <div class="workflow-preset-icon purple">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <div class="workflow-preset-info">
+                <div class="workflow-preset-name">Share Mode</div>
+                <div class="workflow-preset-desc">Upload & copy share link</div>
+              </div>
+            </div>
+            <div class="workflow-preset" data-workflow="edit-first" onclick="selectWorkflow('edit-first')">
+              <div class="workflow-preset-icon pink">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </div>
+              <div class="workflow-preset-info">
+                <div class="workflow-preset-name">Edit First</div>
+                <div class="workflow-preset-desc">Open editor before saving</div>
+              </div>
+            </div>
+            <div class="workflow-preset" data-workflow="save-only" onclick="selectWorkflow('save-only')">
+              <div class="workflow-preset-icon green">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              </div>
+              <div class="workflow-preset-info">
+                <div class="workflow-preset-name">Save Only</div>
+                <div class="workflow-preset-desc">Save to disk silently</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visual Pipeline Display -->
+          <div class="workflow-pipeline" id="workflow-pipeline">
+            <div class="pipeline-label">Pipeline</div>
+            <div class="pipeline-flow" id="pipeline-flow">
+              <!-- Filled by JS -->
+            </div>
+          </div>
+
+          <!-- Additional Options -->
+          <div class="setting-row" style="margin-top:8px">
+            <div class="setting-info">
+              <h4>Show After-Capture Popup</h4>
+              <p>Floating action bar after each capture</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="setting-popup" checked onchange="updateSetting('afterCapture.showPopup', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Show Notification</h4>
+              <p>Display system notification after capture</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="setting-notification" onchange="updateSetting('afterCapture.showNotification', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Recording -->
+        <div class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+            Recording
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Video FPS</h4>
+              <p>Frames per second for video recording</p>
+            </div>
+            <select id="setting-videofps" onchange="updateSetting('general.videoFps', parseInt(this.value))">
+              <option value="15">15 fps</option>
+              <option value="24">24 fps</option>
+              <option value="30">30 fps</option>
+              <option value="60">60 fps</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>GIF FPS</h4>
+              <p>Frames per second for GIF recording</p>
+            </div>
+            <select id="setting-giffps" onchange="updateSetting('general.gifFps', parseInt(this.value))">
+              <option value="10">10 fps</option>
+              <option value="15">15 fps</option>
+              <option value="20">20 fps</option>
+              <option value="30">30 fps</option>
+            </select>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>System Audio</h4>
+              <p>Include system audio in recordings</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="setting-sysaudio" onchange="updateSetting('recording.includeSystemAudio', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Microphone</h4>
+              <p>Include microphone audio</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="setting-mic" onchange="updateSetting('recording.includeMicrophone', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Countdown</h4>
+              <p>Seconds before recording starts</p>
+            </div>
+            <select id="setting-countdown" onchange="updateSetting('recording.countdown', parseInt(this.value))">
+              <option value="0">None</option>
+              <option value="3">3 seconds</option>
+              <option value="5">5 seconds</option>
+              <option value="10">10 seconds</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Analyze Image -->
+        <div class="card">
+          <div class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            Analyze Image
+            <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:400">AI-powered image analysis</span>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Enable Analyze Image</h4>
+              <p>Use AI vision models to analyze your captures</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="setting-analyze-enabled" onchange="toggleAnalyzeImage(this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div id="analyze-settings" style="display:none">
+            <div class="setting-row">
+              <div class="setting-info">
+                <h4>AI Provider</h4>
+                <p>Select which vision model to use</p>
+              </div>
+              <select id="setting-analyze-provider" onchange="updateAnalyzeSetting('provider', this.value)">
+                <option value="openai">OpenAI ChatGPT</option>
+                <option value="gemini">Google Gemini</option>
+              </select>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-info">
+                <h4>API Key</h4>
+                <p id="analyze-key-hint">Your OpenAI API key</p>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="password" id="setting-analyze-apikey" placeholder="sk-..." style="width:220px" onchange="updateAnalyzeSetting('apiKey', this.value)">
+                <button class="btn btn-sm" id="test-key-btn" onclick="testAnalyzeKey()">Test Key</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:8px">
+          <button class="btn btn-danger" onclick="resetSettings()">Reset All Settings</button>
+        </div>
+      </div>
+
+      <!-- ═══ Hotkeys ═══ -->
+      <div class="page" id="page-hotkeys">
+        <div class="page-header">
+          <h1>Keyboard Shortcuts</h1>
+          <p>Customize your capture hotkeys — click a field and press your desired key combination</p>
+        </div>
+
+        <div class="card">
+          <div id="hotkey-list"></div>
+        </div>
+      </div>
+
+      <!-- ═══ Upload ═══ -->
+      <div class="page" id="page-upload">
+        <div class="page-header">
+          <h1>Upload Configuration</h1>
+          <p>Configure where your captures get uploaded</p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Default Upload Service</div>
+          <div class="form-group">
+            <select id="upload-service" onchange="updateSetting('upload.defaultService', this.value); showUploadSection(this.value)">
+              <option value="local">Local (Save to disk)</option>
+              <option value="imgur">Imgur</option>
+              <option value="custom">Custom API</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Imgur -->
+        <div class="card upload-section" id="upload-imgur" style="display:none">
+          <div class="card-title" style="color:var(--orbit-green)">Imgur Configuration</div>
+          <div class="form-group">
+            <label>Client ID</label>
+            <input type="text" id="imgur-clientid" placeholder="Enter your Imgur Client ID" onchange="updateSetting('upload.imgur.clientId', this.value)">
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Anonymous Upload</h4>
+              <p>Upload without linking to an Imgur account</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="imgur-anonymous" onchange="updateSetting('upload.imgur.anonymous', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Custom API -->
+        <div class="card upload-section" id="upload-custom" style="display:none">
+          <div class="card-title" style="color:var(--orbit-purple)">Custom API Configuration</div>
+          <div class="form-group">
+            <label>Upload URL</label>
+            <input type="url" id="custom-url" placeholder="https://your-server.com/upload" onchange="updateSetting('upload.custom.url', this.value)">
+          </div>
+          <div class="form-group">
+            <label>HTTP Method</label>
+            <select id="custom-method" onchange="updateSetting('upload.custom.method', this.value)">
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Form Field Name</label>
+            <input type="text" id="custom-field" placeholder="file" onchange="updateSetting('upload.custom.fieldName', this.value)">
+          </div>
+          <div class="form-group">
+            <label>Response URL JSON Path</label>
+            <input type="text" id="custom-urlpath" placeholder="data.url" onchange="updateSetting('upload.custom.responseUrlPath', this.value)">
+          </div>
+          <div class="form-group">
+            <label>Extra Headers (JSON)</label>
+            <textarea id="custom-headers" rows="3" placeholder='{"Authorization": "Bearer token"}' onchange="try{updateSetting('upload.custom.headers',JSON.parse(this.value))}catch{}" style="font-family:var(--font-mono);font-size:12px"></textarea>
+          </div>
+        </div>
+
+        <!-- Local -->
+        <div class="card upload-section" id="upload-local">
+          <div class="card-title" style="color:var(--orbit-blue)">Local Configuration</div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Built-in File Server</h4>
+              <p>Serve captures via a local HTTP server for sharing</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="local-server" onchange="updateSetting('upload.local.serverEnabled', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label>Server Port</label>
+            <input type="number" id="local-port" placeholder="8844" style="width:120px" onchange="updateSetting('upload.local.port', parseInt(this.value))">
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Analyze Image ═══ -->
+      <div class="page" id="page-analyze">
+        <div class="page-header">
+          <h1>Analyze Image</h1>
+          <p>Use AI vision to analyze your images</p>
+        </div>
+
+        <div id="analyze-disabled-msg" class="card" style="text-align:center;padding:40px">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.5" style="margin-bottom:16px">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <h3 style="color:var(--text-secondary)">Feature Disabled</h3>
+          <p style="color:var(--text-muted);margin:8px 0">Enable "Analyze Image" in Settings to use AI-powered image analysis.</p>
+          <button class="btn btn-primary" style="margin-top:12px" onclick="navigateTo('settings')">Go to Settings</button>
+        </div>
+
+        <div id="analyze-workspace" style="display:none">
+          <div class="card">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Upload Image
+            </div>
+            <div id="analyze-dropzone" class="analyze-dropzone" onclick="document.getElementById('analyze-file-input').click()">
+              <input type="file" id="analyze-file-input" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="handleAnalyzeImageSelect(this)">
+              <div id="analyze-dropzone-content">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <p style="margin-top:8px;font-size:13px">Click to upload or drag &amp; drop</p>
+                <p style="font-size:11px;color:var(--text-muted)">PNG, JPEG, WebP — resized to max 1024px</p>
+              </div>
+              <div id="analyze-preview-container" style="display:none;flex-direction:column;align-items:center">
+                <img id="analyze-preview-img" style="max-width:100%;max-height:300px;border-radius:var(--radius)">
+                <button class="btn btn-sm" style="margin-top:8px" onclick="event.stopPropagation();clearAnalyzeImage()">Remove</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              Prompt
+            </div>
+            <textarea id="analyze-prompt" rows="3" placeholder="Describe what you'd like to know about this image..." style="font-family:var(--font);font-size:13px"></textarea>
+            <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+              <button class="btn btn-primary" id="analyze-submit-btn" onclick="submitAnalyzeImage()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                Analyze
+              </button>
+              <span id="analyze-provider-badge" style="font-size:11px;color:var(--text-muted)"></span>
+            </div>
+          </div>
+
+          <div class="card" id="analyze-result-card" style="display:none">
+            <div class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+              Analysis Result
+              <button class="btn btn-sm" style="margin-left:auto" onclick="navigator.clipboard.writeText(document.getElementById('analyze-result').textContent);showToast('Copied to clipboard','success')">Copy</button>
+            </div>
+            <div id="analyze-result" style="white-space:pre-wrap;font-size:13px;line-height:1.6;color:var(--text-secondary)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ About ═══ -->
+      <div class="page" id="page-about">
+        <div class="page-header">
+          <h1>About OrbitFrame</h1>
+          <p>Your orbital screen capture companion</p>
+        </div>
+        <div class="card" style="text-align:center;padding:40px">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style="margin-bottom:16px">
+            <circle cx="12" cy="12" r="10"/>
+            <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(30 12 12)"/>
+            <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-30 12 12)"/>
+            <circle cx="12" cy="12" r="2" fill="var(--accent)"/>
+          </svg>
+          <h2 style="font-size:24px;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">OrbitFrame</h2>
+          <p style="color:var(--text-secondary);margin:8px 0">Version 1.0.2</p>
+          <p style="color:var(--text-muted);font-size:13px;max-width:400px;margin:12px auto">
+            A futuristic screen capture and sharing toolkit with annotation tools, multiple upload destinations, and fully customizable workflows.
+          </p>
+          <div style="margin-top:24px;display:flex;gap:8px;justify-content:center">
+            <span style="padding:4px 12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);font-size:12px;color:var(--text-muted)">Electron</span>
+            <span style="padding:4px 12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);font-size:12px;color:var(--text-muted)">Node.js</span>
+            <span style="padding:4px 12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);font-size:12px;color:var(--text-muted)">Canvas</span>
+            <span style="padding:4px 12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);font-size:12px;color:var(--text-muted)">Tesseract.js</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="status-dot"></span>
+    <span>Ready</span>
+    <span style="flex:1"></span>
+    <span id="status-captures">0 captures</span>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>OrbitFrame — Capture Complete</title>
+  <link rel="stylesheet" href="styles/after-capture.css">
+</head>
+<body>
+  <div class="popup" id="popup">
+    <!-- Thumbnail Preview -->
+    <div class="preview-area" id="preview-area">
+      <img id="preview-img" alt="Capture preview">
+      <div class="preview-overlay" id="preview-overlay">
+        <span class="preview-badge" id="capture-type-badge">Fullscreen</span>
+        <span class="preview-dimensions" id="capture-dimensions"></span>
+      </div>
+    </div>
+
+    <!-- Confirmation Banner (hidden by default) -->
+    <div class="confirm-banner" id="confirm-banner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <span id="confirm-text">Copied to clipboard</span>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="actions">
+      <button class="action-btn primary" id="btn-copy" title="Copy to Clipboard (Ctrl+C)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span>Copy</span>
+        <kbd>C</kbd>
+      </button>
+      <button class="action-btn" id="btn-save" title="Save to File (Ctrl+S)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <span>Save</span>
+        <kbd>S</kbd>
+      </button>
+      <button class="action-btn" id="btn-edit" title="Open in Editor (E)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span>Edit</span>
+        <kbd>E</kbd>
+      </button>
+      <button class="action-btn" id="btn-upload" title="Upload (U)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span>Upload</span>
+        <kbd>U</kbd>
+      </button>
+      <button class="action-btn" id="btn-ocr" title="Extract Text (T)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        <span>OCR</span>
+        <kbd>T</kbd>
+      </button>
+
+      <!-- More Actions Dropdown -->
+      <div class="more-dropdown" id="more-dropdown">
+        <button class="action-btn more-btn" id="btn-more" title="More Actions">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        </button>
+        <div class="dropdown-menu" id="dropdown-menu">
+          <button class="dropdown-item" id="btn-open-folder">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            Show in Folder
+          </button>
+          <button class="dropdown-item" id="btn-copy-path">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            Copy File Path
+          </button>
+          <button class="dropdown-item" id="btn-print">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
+          <button class="dropdown-item" id="btn-delete">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+            Delete
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" id="btn-pin">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1V3H8v3h1v4.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24z"/></svg>
+            Pin on Screen
+          </button>
+          <button class="dropdown-item" id="btn-settings">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            Workflow Settings
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto-dismiss progress bar -->
+    <div class="dismiss-bar" id="dismiss-bar">
+      <div class="dismiss-progress" id="dismiss-progress"></div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer, clipboard, nativeImage, shell } = require('electron');
+
+    let captureData = null;
+    let dismissTimer = null;
+    let dropdownOpen = false;
+
+    // Receive capture data from main process
+    ipcRenderer.on('load-capture', (event, data) => {
+      captureData = data;
+
+      // Set preview image
+      if (data.buffer) {
+        document.getElementById('preview-img').src = `data:image/png;base64,${data.buffer}`;
+      }
+
+      // Set capture type badge
+      const typeLabels = {
+        fullscreen: 'Fullscreen',
+        region: 'Region',
+        window: 'Window',
+        scrolling: 'Scrolling',
+        gif: 'GIF',
+        video: 'Video',
+        ocr: 'OCR'
+      };
+      document.getElementById('capture-type-badge').textContent = typeLabels[data.type] || 'Capture';
+
+      // Set dimensions
+      if (data.width && data.height) {
+        document.getElementById('capture-dimensions').textContent = `${data.width} × ${data.height}`;
+      }
+
+      // Start auto-dismiss countdown (8 seconds)
+      startDismissTimer(8000);
+
+      // Execute workflow auto-actions
+      if (data.autoActions) {
+        data.autoActions.forEach(action => {
+          if (action === 'copy') performCopy(true);
+          if (action === 'save') performSave(true);
+        });
+      }
+    });
+
+    // Auto-dismiss timer
+    function startDismissTimer(duration) {
+      const progress = document.getElementById('dismiss-progress');
+      progress.style.transition = `width ${duration}ms linear`;
+      requestAnimationFrame(() => {
+        progress.style.width = '0%';
+      });
+
+      dismissTimer = setTimeout(() => {
+        closePopup();
+      }, duration);
+    }
+
+    function pauseDismiss() {
+      if (dismissTimer) {
+        clearTimeout(dismissTimer);
+        dismissTimer = null;
+        document.getElementById('dismiss-progress').style.transition = 'none';
+        document.getElementById('dismiss-progress').style.width =
+          document.getElementById('dismiss-progress').getBoundingClientRect().width /
+          document.getElementById('dismiss-bar').getBoundingClientRect().width * 100 + '%';
+      }
+    }
+
+    function resumeDismiss() {
+      if (!dismissTimer && !dropdownOpen) {
+        startDismissTimer(4000);
+      }
+    }
+
+    // Pause on hover
+    document.getElementById('popup').addEventListener('mouseenter', pauseDismiss);
+    document.getElementById('popup').addEventListener('mouseleave', resumeDismiss);
+
+    // Confirmation banner
+    function showConfirm(text) {
+      const banner = document.getElementById('confirm-banner');
+      const textEl = document.getElementById('confirm-text');
+      textEl.textContent = text;
+      banner.classList.add('visible');
+      setTimeout(() => banner.classList.remove('visible'), 2200);
+    }
+
+    // Actions
+    function performCopy(silent) {
+      if (!captureData?.buffer) return;
+      ipcRenderer.send('after-capture-action', 'copy', captureData);
+      if (!silent) showConfirm('Copied to clipboard');
+    }
+
+    function performSave(silent) {
+      ipcRenderer.send('after-capture-action', 'save', captureData);
+      if (!silent) showConfirm('Saved to file');
+    }
+
+    document.getElementById('btn-copy').addEventListener('click', () => performCopy());
+    document.getElementById('btn-save').addEventListener('click', () => performSave());
+
+    document.getElementById('btn-edit').addEventListener('click', () => {
+      ipcRenderer.send('after-capture-action', 'edit', captureData);
+      closePopup();
+    });
+
+    document.getElementById('btn-upload').addEventListener('click', () => {
+      ipcRenderer.send('after-capture-action', 'upload', captureData);
+      showConfirm('Uploading...');
+    });
+
+    document.getElementById('btn-ocr').addEventListener('click', () => {
+      ipcRenderer.send('after-capture-action', 'ocr', captureData);
+      showConfirm('Extracting text...');
+    });
+
+    // More dropdown
+    document.getElementById('btn-more').addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownOpen = !dropdownOpen;
+      document.getElementById('dropdown-menu').classList.toggle('open', dropdownOpen);
+      if (dropdownOpen) pauseDismiss();
+    });
+
+    document.addEventListener('click', () => {
+      if (dropdownOpen) {
+        dropdownOpen = false;
+        document.getElementById('dropdown-menu').classList.remove('open');
+      }
+    });
+
+    // Dropdown items
+    document.getElementById('btn-open-folder').addEventListener('click', () => {
+      if (captureData?.savedPath) shell.showItemInFolder(captureData.savedPath);
+    });
+
+    document.getElementById('btn-copy-path').addEventListener('click', () => {
+      if (captureData?.savedPath) {
+        clipboard.writeText(captureData.savedPath);
+        showConfirm('Path copied');
+      }
+    });
+
+    document.getElementById('btn-print').addEventListener('click', () => {
+      ipcRenderer.send('after-capture-action', 'print', captureData);
+    });
+
+    document.getElementById('btn-delete').addEventListener('click', () => {
+      ipcRenderer.send('after-capture-action', 'delete', captureData);
+      showConfirm('Deleted');
+      setTimeout(closePopup, 800);
+    });
+
+    document.getElementById('btn-pin').addEventListener('click', () => {
+      ipcRenderer.send('after-capture-action', 'pin', captureData);
+      closePopup();
+    });
+
+    document.getElementById('btn-settings').addEventListener('click', () => {
+      ipcRenderer.send('after-capture-action', 'settings', captureData);
+      closePopup();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePopup();
+      if (e.key === 'c' || e.key === 'C') performCopy();
+      if (e.key === 's' || e.key === 'S') performSave();
+      if (e.key === 'e' || e.key === 'E') {
+        ipcRenderer.send('after-capture-action', 'edit', captureData);
+        closePopup();
+      }
+      if (e.key === 'u' || e.key === 'U') {
+        ipcRenderer.send('after-capture-action', 'upload', captureData);
+        showConfirm('Uploading...');
+      }
+      if (e.key === 't' || e.key === 'T') {
+        ipcRenderer.send('after-capture-action', 'ocr', captureData);
+        showConfirm('Extracting text...');
+      }
+    });
+
+    // Close
+    function closePopup() {
+      if (dismissTimer) clearTimeout(dismissTimer);
+      document.getElementById('popup').classList.add('closing');
+      setTimeout(() => ipcRenderer.send('close-after-capture'), 200);
+    }
+
+    // Upload result
+    ipcRenderer.on('upload-complete', (event, url) => {
+      showConfirm('Uploaded — URL copied!');
+    });
+
+    // OCR result
+    ipcRenderer.on('ocr-complete', (event, text) => {
+      showConfirm('Text extracted & copied');
+    });
+  </script>
+</body>
+</html>
